@@ -5,7 +5,7 @@ bool isASCII(wchar_t c)
 	return c < 0x80;
 }
 
-bool isValidUTF8(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize = nullptr)
+bool isValidUTF8(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize, bool a_bEmptyIsValid)
 {
 	u32 uSize = 0;
 	for (u32 i = 0; i < a_uCodeSize; i++)
@@ -18,7 +18,7 @@ bool isValidUTF8(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize = nullptr)
 			{
 				*a_pSize = uSize;
 			}
-			return uSize != 0;
+			return a_bEmptyIsValid || uSize != 0;
 		}
 		else if (pUTF8[0] >= 0xE0 && pUTF8[0] <= 0xEF)
 		{
@@ -80,7 +80,7 @@ int UMain(int argc, UChar* argv[])
 		for (u32 i = 0; i < uCodeSize; i++)
 		{
 			u32 uSize = 0;
-			if (isValidUTF8(pCode + i, uCodeSize - i, &uSize))
+			if (isValidUTF8(pCode + i, uCodeSize - i, &uSize, bIncludeEmpty))
 			{
 				wstring sTxt = U8ToW(reinterpret_cast<char*>(pCode + i));
 				bool bEmpty = sTxt.empty();
@@ -103,7 +103,7 @@ int UMain(int argc, UChar* argv[])
 		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
 		{
 			u32 uRamOffset = *reinterpret_cast<u32*>(pCode + i);
-			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize)
+			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidUTF8(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
 			{
 				string sTxtU8 = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
 				wstring sTxt;
@@ -145,7 +145,7 @@ int UMain(int argc, UChar* argv[])
 			// PC + 8
 			u32 uRamOffset = i + 0x100000 + 8;
 			uRamOffset += (uUnrotatedValue >> uRoRBits) | (uUnrotatedValue << (32 - uRoRBits));
-			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize)
+			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidUTF8(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
 			{
 				string sTxtU8 = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
 				wstring sTxt;
