@@ -7,17 +7,22 @@ bool isASCII(wchar_t c)
 
 int UMain(int argc, UChar* argv[])
 {
-	if (argc != 6)
+	if (argc != 7)
 	{
 		return 1;
 	}
-	n32 nMethod = SToN32(argv[3]);
-	if (nMethod != 1 && nMethod != 2)
+	n32 nFindMethod = SToN32(argv[3]);
+	if (nFindMethod != 1 && nFindMethod != 2)
 	{
 		return 1;
 	}
-	bool bIncludeEmpty = UCscmp(argv[4], USTR("0")) != 0;
-	bool bIncludeASCIIOnly = UCscmp(argv[5], USTR("0")) != 0;
+	n32 nOutputMethod = SToN32(argv[4]);
+	if (nOutputMethod != 0 && nOutputMethod != 1)
+	{
+		return 1;
+	}
+	bool bIncludeEmpty = UCscmp(argv[5], USTR("0")) != 0;
+	bool bIncludeASCIIOnly = UCscmp(argv[6], USTR("0")) != 0;
 	FILE* fp = UFopen(argv[1], USTR("rb"), false);
 	if (fp == nullptr)
 	{
@@ -32,7 +37,7 @@ int UMain(int argc, UChar* argv[])
 	map<u32, u32> mOffsetAddress;
 	map<u32, u32> mOffsetSize;
 	map<u32, wstring> mOffsetText;
-	if (nMethod == 1)
+	if (nFindMethod == 1)
 	{
 		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
 		{
@@ -63,7 +68,7 @@ int UMain(int argc, UChar* argv[])
 			}
 		}
 	}
-	else if (nMethod == 2)
+	else if (nFindMethod == 2)
 	{
 		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
 		{
@@ -112,11 +117,29 @@ int UMain(int argc, UChar* argv[])
 		return 1;
 	}
 	fwrite("\xFF\xFE", 2, 1, fp);
-	for (map<u32, u32>::iterator it = mOffsetSize.begin(); it != mOffsetSize.end(); ++it)
+	if (nOutputMethod == 0)
 	{
-		wstring sTxt = Replace(mOffsetText[it->first], L'\r', L"");
-		sTxt = Replace(sTxt, L'\n', L"");
-		fu16printf(fp, L"%X,%X,%u,%ls\r\n", it->first, mOffsetAddress[it->first], it->second, sTxt.c_str());
+		for (map<u32, u32>::iterator it = mOffsetSize.begin(); it != mOffsetSize.end(); ++it)
+		{
+			wstring sTxt = Replace(mOffsetText[it->first], L'\r', L"");
+			sTxt = Replace(sTxt, L'\n', L"");
+			fu16printf(fp, L"%X,%X,%u,%ls\r\n", it->first, mOffsetAddress[it->first], it->second, sTxt.c_str());
+		}
+	}
+	else if (nOutputMethod == 1)
+	{
+		map<u32, u32> mAddressOffset;
+		for (map<u32, u32>::iterator it = mOffsetAddress.begin(); it != mOffsetAddress.end(); ++it)
+		{
+			mAddressOffset.insert(make_pair(it->second, it->first));
+		}
+		for (map<u32, u32>::iterator it = mAddressOffset.begin(); it != mAddressOffset.end(); ++it)
+		{
+			u32 uOffset = it->second;
+			wstring sTxt = Replace(mOffsetText[uOffset], L'\r', L"");
+			sTxt = Replace(sTxt, L'\n', L"");
+			fu16printf(fp, L"%X,%X,%u,%ls\r\n", uOffset, it->first, mOffsetSize[uOffset], sTxt.c_str());
+		}
 	}
 	fclose(fp);
 	return 0;
