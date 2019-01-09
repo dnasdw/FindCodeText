@@ -50,11 +50,17 @@ bool isValidUTF8(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize = nullptr)
 
 int UMain(int argc, UChar* argv[])
 {
-	if (argc != 4)
+	if (argc != 6)
 	{
 		return 1;
 	}
-	bool bIncludeASCIIOnly = UCscmp(argv[3], USTR("0")) != 0;
+	n32 nMethod = SToN32(argv[3]);
+	if (nMethod != 0 && nMethod != 1)
+	{
+		return 1;
+	}
+	bool bIncludeEmpty = UCscmp(argv[4], USTR("0")) != 0;
+	bool bIncludeASCIIOnly = UCscmp(argv[5], USTR("0")) != 0;
 	FILE* fp = UFopen(argv[1], USTR("rb"), false);
 	if (fp == nullptr)
 	{
@@ -66,20 +72,60 @@ int UMain(int argc, UChar* argv[])
 	u8* pCode = new u8[uCodeSize];
 	fread(pCode, 1, uCodeSize, fp);
 	fclose(fp);
+	map<u32, u32> mOffsetAddress;
 	map<u32, u32> mOffsetSize;
 	map<u32, wstring> mOffsetText;
-	for (u32 i = 0; i < uCodeSize; i++)
+	if (nMethod == 0)
 	{
-		u32 uSize = 0;
-		if (isValidUTF8(pCode + i, uCodeSize - i, &uSize))
+		for (u32 i = 0; i < uCodeSize; i++)
 		{
-			wstring sTxt = U8ToW(reinterpret_cast<char*>(pCode + i));
-			bool bASCII = count_if(sTxt.begin(), sTxt.end(), isASCII) == sTxt.size();
-			if (bIncludeASCIIOnly || !bASCII)
+			u32 uSize = 0;
+			if (isValidUTF8(pCode + i, uCodeSize - i, &uSize))
 			{
-				mOffsetSize.insert(make_pair(i, uSize));
-				mOffsetText.insert(make_pair(i, sTxt));
-				i += uSize;
+				wstring sTxt = U8ToW(reinterpret_cast<char*>(pCode + i));
+				bool bEmpty = sTxt.empty();
+				if (bIncludeEmpty || !bEmpty)
+				{
+					bool bASCII = count_if(sTxt.begin(), sTxt.end(), isASCII) == sTxt.size();
+					if (bIncludeASCIIOnly || !bASCII)
+					{
+						mOffsetAddress.insert(make_pair(i, i));
+						mOffsetSize.insert(make_pair(i, uSize));
+						mOffsetText.insert(make_pair(i, sTxt));
+						i += uSize;
+					}
+				}
+			}
+		}
+	}
+	else if (nMethod == 1)
+	{
+		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
+		{
+			u32 uRamOffset = *reinterpret_cast<u32*>(pCode + i);
+			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize)
+			{
+				string sTxtU8 = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
+				wstring sTxt;
+				try
+				{
+					sTxt = U8ToW(sTxtU8);
+				}
+				catch (...)
+				{
+					continue;
+				}
+				bool bEmpty = sTxt.empty();
+				if (bIncludeEmpty || !bEmpty)
+				{
+					bool bASCII = count_if(sTxt.begin(), sTxt.end(), isASCII) == sTxt.size();
+					if (bIncludeASCIIOnly || !bASCII)
+					{
+						mOffsetAddress.insert(make_pair(i, uRamOffset));
+						mOffsetSize.insert(make_pair(i, sTxtU8.size()));
+						mOffsetText.insert(make_pair(i, sTxt));
+					}
+				}
 			}
 		}
 	}
@@ -94,7 +140,7 @@ int UMain(int argc, UChar* argv[])
 	{
 		wstring sTxt = Replace(mOffsetText[it->first], L'\r', L"");
 		sTxt = Replace(sTxt, L'\n', L"");
-		fu16printf(fp, L"%X,%d,%ls\r\n", it->first, it->second, sTxt.c_str());
+		fu16printf(fp, L"%X,%X,%u,%ls\r\n", it->first, mOffsetAddress[it->first], it->second, sTxt.c_str());
 	}
 	fclose(fp);
 	return 0;
