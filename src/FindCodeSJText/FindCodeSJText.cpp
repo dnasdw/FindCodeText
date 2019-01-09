@@ -202,7 +202,30 @@ int UMain(int argc, UChar* argv[])
 	map<u32, u32> mOffsetAddress;
 	map<u32, u32> mOffsetSize;
 	map<u32, wstring> mOffsetText;
-	if (nMethod == 1)
+	if (nMethod == 0)
+	{
+		for (u32 i = 0; i < uCodeSize; i++)
+		{
+			u32 uSize = 0;
+			if (isValidSJIS(pCode + i, uCodeSize - i, &uSize, bIncludeEmpty))
+			{
+				wstring sTxt = XToW(reinterpret_cast<char*>(pCode + i), 932, "CP932");
+				bool bEmpty = sTxt.empty();
+				if (bIncludeEmpty || !bEmpty)
+				{
+					bool bASCII = count_if(sTxt.begin(), sTxt.end(), isASCII) == sTxt.size();
+					if (bIncludeASCIIOnly || !bASCII)
+					{
+						mOffsetAddress.insert(make_pair(i, i));
+						mOffsetSize.insert(make_pair(i, uSize));
+						mOffsetText.insert(make_pair(i, sTxt));
+						i += uSize;
+					}
+				}
+			}
+		}
+	}
+	else if (nMethod == 1)
 	{
 		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
 		{
