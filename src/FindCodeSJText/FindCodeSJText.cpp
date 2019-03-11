@@ -267,7 +267,7 @@ int UMain(int argc, UChar* argv[])
 		{
 			u32 uIns = *reinterpret_cast<u32*>(pCode + i);
 			// ADR
-			if ((uIns & 0xFFF0000) != 0x28F0000)
+			if ((uIns & 0xFFF0000) != 0x28F0000 && (uIns & 0xFFF0000) != 0x24F0000)
 			{
 				continue;
 			}
@@ -276,7 +276,14 @@ int UMain(int argc, UChar* argv[])
 			u32 uRoRBits = (uImm12 >> 8 & 0xF) * 2;
 			// PC + 8
 			u32 uRamOffset = i + 0x100000 + 8;
-			uRamOffset += (uUnrotatedValue >> uRoRBits) | (uUnrotatedValue << (32 - uRoRBits));
+			if ((uIns & 0xFFF0000) == 0x28F0000)
+			{
+				uRamOffset += (uUnrotatedValue >> uRoRBits) | (uUnrotatedValue << (32 - uRoRBits));
+			}
+			else if ((uIns & 0xFFF0000) == 0x24F0000)
+			{
+				uRamOffset -= (uUnrotatedValue >> uRoRBits) | (uUnrotatedValue << (32 - uRoRBits));
+			}
 			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidSJIS(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
 			{
 				string sTxtA = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
