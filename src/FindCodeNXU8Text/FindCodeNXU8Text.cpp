@@ -136,6 +136,12 @@ int UMain(int argc, UChar* argv[])
 	memcpy(pUncompressed + pNsoHeader->TextMemoryOffset, pCode + pNsoHeader->TextFileOffset, pNsoHeader->TextSize);
 	memcpy(pUncompressed + pNsoHeader->RoMemoryOffset, pCode + pNsoHeader->RoFileOffset, pNsoHeader->RoSize);
 	memcpy(pUncompressed + pNsoHeader->DataMemoryOffset, pCode + pNsoHeader->DataFileOffset, pNsoHeader->DataSize);
+	FILE* fpNso = fopen("temp.nso", "wb");
+	if (fpNso != nullptr)
+	{
+		fwrite(pUncompressed, 1, uUncompressedSize, fpNso);
+		fclose(fpNso);
+	}
 	map<u32, u32> mOffsetAddress;
 	map<u32, u32> mOffsetSize;
 	map<u32, wstring> mOffsetText;
