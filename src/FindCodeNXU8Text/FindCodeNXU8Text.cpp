@@ -102,7 +102,7 @@ int UMain(int argc, UChar* argv[])
 		return 1;
 	}
 	n32 nFindMethod = SToN32(argv[3]);
-	if (nFindMethod != 0 && nFindMethod != 1)
+	if (nFindMethod != 0 && nFindMethod != 1 && nFindMethod != 2)
 	{
 		return 1;
 	}
@@ -197,6 +197,78 @@ int UMain(int argc, UChar* argv[])
 						mOffsetText.insert(make_pair(i, sTxt));
 					}
 				}
+			}
+		}
+	}
+	else if (nFindMethod == 2)
+	{
+		set<u32> sRamOffset;
+		for (u32 i = pNsoHeader->TextMemoryOffset; i < pNsoHeader->TextMemoryOffset + (pNsoHeader->TextMemoryOffset + pNsoHeader->TextSize - pNsoHeader->TextMemoryOffset) / 4 * 4; i += 4)
+		{
+			u32 uIns = *reinterpret_cast<u32*>(pUncompressed + i);
+			// ADRP
+			if ((uIns & 0x9F000000) != 0x90000000)
+			{
+				continue;
+			}
+			u32 uX = uIns & 0x1F;
+			n32 nImm32 = static_cast<n32>((((uIns >> 5 & 0x7FFFF) << 2) | (uIns >> 29 & 0x3)) << 11) >> 11;
+			n64 nImm64 = static_cast<n64>(nImm32) << 12;
+			u32 uRamOffset = static_cast<u32>((i & 0xFFFFF000) + nImm64);
+			bool bAdd = false;
+			u32 uIns2End = i + 4 + 32 * 4;
+			if (uIns2End > pNsoHeader->TextMemoryOffset + (pNsoHeader->TextMemoryOffset + pNsoHeader->TextSize - pNsoHeader->TextMemoryOffset) / 4 * 4)
+			{
+				uIns2End = pNsoHeader->TextMemoryOffset + (pNsoHeader->TextMemoryOffset + pNsoHeader->TextSize - pNsoHeader->TextMemoryOffset) / 4 * 4;
+			}
+			for (u32 j = i + 4; j < uIns2End; j += 4)
+			{
+				u32 uIns2 = *reinterpret_cast<u32*>(pUncompressed + j);
+				// ADD
+				if ((uIns2 & 0xFF8003FF) != (0x91000000 | (uX << 5) | uX))
+				{
+					continue;
+				}
+				bAdd = true;
+				u32 uShift = uIns2 >> 22 & 0x3;
+				u32 uImm12 = uIns2 >> 10 & 0xFFF;
+				if (uShift == 0)
+				{
+					uRamOffset += uImm12;
+				}
+				else if (uShift == 1)
+				{
+					uRamOffset += uImm12 << 12;
+				}
+				if (uRamOffset >= pNsoHeader->TextMemoryOffset && uRamOffset < pNsoHeader->DataMemoryOffset + pNsoHeader->DataSize && isValidUTF8(pUncompressed + uRamOffset, pNsoHeader->DataMemoryOffset + pNsoHeader->DataSize - uRamOffset, nullptr, bIncludeEmpty))
+				{
+					string sTxtU8 = reinterpret_cast<char*>(pUncompressed + uRamOffset);
+					wstring sTxt;
+					try
+					{
+						sTxt = U8ToW(sTxtU8);
+					}
+					catch (...)
+					{
+						break;
+					}
+					bool bEmpty = sTxt.empty();
+					if (bIncludeEmpty || !bEmpty)
+					{
+						bool bASCII = count_if(sTxt.begin(), sTxt.end(), isASCII) == sTxt.size();
+						if (bIncludeASCIIOnly || !bASCII)
+						{
+							mOffsetAddress.insert(make_pair(i, uRamOffset));
+							mOffsetSize.insert(make_pair(i, sTxtU8.size()));
+							mOffsetText.insert(make_pair(i, sTxt));
+						}
+					}
+				}
+				break;
+			}
+			if (!bAdd)
+			{
+				continue;
 			}
 		}
 	}

@@ -235,7 +235,7 @@ int UMain(int argc, UChar* argv[])
 		for (u32 i = 0; i < uCodeSize / 4 * 4; i += 4)
 		{
 			u32 uRamOffset = *reinterpret_cast<u32*>(pCode + i);
-			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidSJIS(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
+			if (uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidSJIS(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
 			{
 				string sTxtA = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
 				wstring sTxt;
@@ -284,7 +284,7 @@ int UMain(int argc, UChar* argv[])
 			{
 				uRamOffset -= (uUnrotatedValue >> uRoRBits) | (uUnrotatedValue << (32 - uRoRBits));
 			}
-			if (uRamOffset % 2 == 0 && uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidSJIS(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
+			if (uRamOffset >= 0x100000 && uRamOffset < 0x100000 + uCodeSize && isValidSJIS(pCode + uRamOffset - 0x100000, uCodeSize - (uRamOffset - 0x100000), nullptr, bIncludeEmpty))
 			{
 				string sTxtA = reinterpret_cast<char*>(pCode + uRamOffset - 0x100000);
 				wstring sTxt;
