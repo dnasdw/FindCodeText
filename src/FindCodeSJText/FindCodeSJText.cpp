@@ -40,7 +40,11 @@ bool isValidSJIS(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize, bool a_bEmpty
 			}
 			i++;
 		}
-		else if (pSJIS[0] >= 0xEF && pSJIS[0] < 0xF9)
+		else if (pSJIS[0] >= 0xF0 && pSJIS[0] <= 0xF9)
+		{
+			return false;
+		}
+		else if (pSJIS[0] == 0xEF)
 		{
 			return false;
 		}
@@ -60,6 +64,10 @@ bool isValidSJIS(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize, bool a_bEmpty
 			}
 			i++;
 		}
+		else if (pSJIS[0] == 0xEB || pSJIS[0] == 0xEC)
+		{
+			return false;
+		}
 		else if (pSJIS[0] == 0xEA)
 		{
 			if (i + 2 >= a_uCodeSize || pSJIS[1] < 0x40 || pSJIS[1] == 0x7F || pSJIS[1] > 0xA4)
@@ -76,7 +84,7 @@ bool isValidSJIS(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize, bool a_bEmpty
 			}
 			i++;
 		}
-		else if (pSJIS[0] >= 0xA1 && pSJIS[0] <= 0xAF)
+		else if (pSJIS[0] >= 0xA1 && pSJIS[0] <= 0xDF)
 		{
 			if (i + 1 >= a_uCodeSize)
 			{
@@ -157,7 +165,7 @@ bool isValidSJIS(const u8* a_pCode, u32 a_uCodeSize, u32* a_pSize, bool a_bEmpty
 		}
 		else if (pSJIS[0] == 0x81)
 		{
-			if (i + 2 >= a_uCodeSize || pSJIS[1] < 0x40 || pSJIS[1] == 0x7F || (pSJIS[1] >= 0xAD && pSJIS[1] <= 0xB7) || (pSJIS[1] >= 0xC0 && pSJIS[1] <= 0xC7) || (pSJIS[1] >= 0xCF && pSJIS[1] <= 0xD9) || (pSJIS[1] >= 0xE9 && pSJIS[1] <= 0xEF) || (pSJIS[1] >= 0xF9 && pSJIS[1] <= 0xFB) || pSJIS[1] > 0xFC)
+			if (i + 2 >= a_uCodeSize || pSJIS[1] < 0x40 || pSJIS[1] == 0x7F || (pSJIS[1] >= 0xAD && pSJIS[1] <= 0xB7) || (pSJIS[1] >= 0xC0 && pSJIS[1] <= 0xC7) || (pSJIS[1] >= 0xCF && pSJIS[1] <= 0xD9) || (pSJIS[1] >= 0xE9 && pSJIS[1] <= 0xEF) || (pSJIS[1] >= 0xF8 && pSJIS[1] <= 0xFB) || pSJIS[1] > 0xFC)
 			{
 				return false;
 			}
